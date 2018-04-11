@@ -23,9 +23,12 @@ The questions you need to answer are: What are the consequences of using a meta-
 setwd("~/Desktop/4. Semester/Computational models/Portfolio-4")
 
 MetaData=read.csv("Assignment4MetaData.csv", sep = ";")
-PitchData=read.csv("Assignment4PitchDatav2.csv", sep=";")
+PitchData=read.csv("PitchDatav2.csv", sep=";")
 
 library(brms)
+devtools::install_github("mvuorre/brmstools")
+library(brmstools)
+library(dplyr)
 ```
 
 ### Step by step suggestions
@@ -36,12 +39,22 @@ Step 1: Reproduce the meta-analysis of pitch sd from previous studies of voice i
 - Since we're only interested in getting a meta-analytic effect size, let's take a shortcut and use bromance magic (brms): https://mvuorre.github.io/post/2016/2016-09-29-bayesian-meta-analysis/
 
 ```{r}
+#Changing values to numeric
+MetaData$MeanES=as.character(MetaData$MeanES)
+MetaData$MeanES=as.numeric(MetaData$MeanES)
 
-MA <- brm(MeanES | se(SdES) ~ 1 + (1|StudyRef), 
-               prior = set_prior("uniform(0, 1000)", class = "sd"),
-               data = MetaData, iter = 5000, warmup = 2000, cores = 4)
+MetaData$SdES=as.character(MetaData$SdES)
+MetaData$SdES=as.numeric(MetaData$SdES)
 
+#
+ModelMA = brm(MeanES | se(SdES) ~ 1 + (1|StudyRef),
+          data = MetaData, iter = 2000, cores = 2, chains = 2)
 
+summary(ModelMA)
+plotMA=plot(ModelMA)
+
+#Making a forest plot
+forest(ModelMA, show_data = TRUE, av_name = "Effect size")
 ```
 
 Step 2: Prepare the pitch SD data from last year
@@ -50,6 +63,11 @@ Step 2: Prepare the pitch SD data from last year
 - Also, let's standardize the data, so that they are compatible with our meta-analytic prior (Cohen's d is measured in SDs).
 
 ```{r}
+
+#Creating a new dataset with mean and sd for each participant 
+PitchData2=PitchData %>% group_by(ID_unique) %>% dplyr::summarise(mean = mean(PitchMean), sd= mean(PitchSD)) %>% mutate(scaleMean = scale(mean), scaleSD=scale(sd))
+
+
 
 ```
 
