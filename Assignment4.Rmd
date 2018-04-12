@@ -29,6 +29,9 @@ library(brms)
 devtools::install_github("mvuorre/brmstools")
 library(brmstools)
 library(dplyr)
+library(rethinking)
+library(ggplot2)
+library(cowplot)
 ```
 
 ### Step by step suggestions
@@ -65,7 +68,7 @@ Step 2: Prepare the pitch SD data from last year
 ```{r}
 
 #Creating a new dataset with mean and sd for each participant 
-PitchData2=PitchData %>% group_by(ID_unique) %>% dplyr::summarise(mean = mean(PitchMean), sd= mean(PitchSD)) %>% mutate(scaleMean = scale(mean), scaleSD=scale(sd))
+PitchData2=PitchData %>% group_by(ID_unique) %>% dplyr::summarise(mean = mean(PitchMean), sd= mean(PitchSD), diagnosis=mean(diagnosis), studynumber=mean(studynr)) %>% mutate(scaleMean = scale(mean), scaleSD=scale(sd))
 
 
 
@@ -78,6 +81,66 @@ Step 3: Build a regression model predicting Pitch SD from Diagnosis.
 - Describe and plot the estimates. Evaluate model quality
 
 ```{r}
+PitchData2=as.data.frame(PitchData2)
+
+model1=map(
+  alist(
+    scaleSD ~ dnorm( mu , sigma ),
+    mu <- Intercept + b_diagnosis*diagnosis,
+    Intercept ~ dnorm(0,2),
+    b_diagnosis ~ dnorm(0,1),
+    sigma ~ dunif(0,5)
+)
+, data = PitchData2)
+
+precis1=precis(model1)
+precis1
+
+plot(precis1)
+
+dens(PitchData2$scaleSD[PitchData2$diagnosis=="1"], col="red")
+dens(PitchData2$scaleSD[PitchData2$diagnosis=="0"], add=TRUE)
+
+ggplot(PitchData2, aes(x=scaleSD, colour=diagnosis))+
+  geom_density()
+
+
+#Using a more skeptical prior
+
+model2=map(
+alist(
+    scaleSD ~ dnorm( mu , sigma ),
+    mu <- Intercept +
+        b_diagnosis*diagnosis,
+    Intercept ~ dnorm(0,2),
+    b_diagnosis ~ dnorm(0,01),
+    sigma ~ dunif(0,5)
+)
+, data = PitchData2)
+
+precis(model2)
+
+
+#Quality assessment 
+
+mu <- link( model2 )
+# summarize samples across cases
+mu.mean <- apply( mu , 2 , mean )
+mu.HPDI <- apply( mu , 2 , HPDI )
+# simulate observations
+# again no new data, so uses original data
+scaleSD.sim <- sim( model2 , n=1e4 )
+scaleSD.HPDI <- apply( scaleSD.sim , 2 , HPDI )
+
+#plotting
+plot( mu.mean ~ PitchData2$scaleSD , col=rangi2 , ylim=range(mu.HPDI) ,
+xlab="Observed Pitch" , ylab="Predicted Picth" )
+abline( a=0 , b=1 , lty=2 )
+for ( i in 1:nrow(PitchData2) )
+lines( rep(PitchData2$scaleSD[i],2) , c(mu.HPDI[1,i],mu.HPDI[2,i]) ,
+col=rangi2 )
+
+
 
 ```
 
@@ -85,6 +148,20 @@ Step 4: Now re-run the model with the meta-analytic prior
 - Describe and plot the estimates. Evaluate model quality
 
 ```{r}
+
+model3=map(
+alist(
+    scaleSD ~ dnorm( mu , sigma ),
+    mu <- Intercept +
+        b_diagnosis*diagnosis,
+    Intercept ~ dnorm(0,2),
+    b_diagnosis ~ dnorm(-0.54,0.23),
+    sigma ~ dunif(0,5)
+)
+, data = PitchData2)
+
+precis(model1)
+precis(model3)
 
 ```
 
@@ -95,6 +172,13 @@ Step 5: Compare the models
 - Discuss how they compare and whether any of them is best.
 
 ```{r}
+coeftab(model1,model2,model3)
+plot(coeftab(model1,model2,model3))
+compare(model1,model2,model3)
+plot(compare(model1,model2,model3))
+
+
+
 
 ```
 
