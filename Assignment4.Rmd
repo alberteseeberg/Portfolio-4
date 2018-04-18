@@ -89,7 +89,7 @@ model1=map(
     mu <- Intercept + b_diagnosis*diagnosis,
     Intercept ~ dnorm(0,2),
     b_diagnosis ~ dnorm(0,1),
-    sigma ~ dunif(0,5)
+    sigma ~ dcauchy(0,5)
 )
 , data = PitchData2)
 
@@ -114,7 +114,7 @@ alist(
         b_diagnosis*diagnosis,
     Intercept ~ dnorm(0,2),
     b_diagnosis ~ dnorm(0,01),
-    sigma ~ dunif(0,5)
+    sigma ~ dcauchy(0,5)
 )
 , data = PitchData2)
 
@@ -148,6 +148,17 @@ Step 4: Now re-run the model with the meta-analytic prior
 - Describe and plot the estimates. Evaluate model quality
 
 ```{r}
+#RICCARDO MODEL3
+#model3=map(
+#alist(
+#scaleSD~dnorm(mu,sigma),
+#mu=Intercept+
+#b_diagnosis*diagnosis,
+#Intercept~dnorm(0,1),
+#b_diagnosis~dnorm(-6,76),
+#sigma~dcauchy(0,2)
+
+#Fra model tal - INT=-0,6, SE(int)=0.27, SD(int)=0.76, SE(SD(int))=0.28
 
 model3=map(
 alist(
@@ -155,8 +166,8 @@ alist(
     mu <- Intercept +
         b_diagnosis*diagnosis,
     Intercept ~ dnorm(0,2),
-    b_diagnosis ~ dnorm(-0.54,0.23),
-    sigma ~ dunif(0,5)
+    b_diagnosis ~ dnorm(-0.57,0.23),
+    sigma ~ dcauchy(0,5)
 )
 , data = PitchData2)
 
@@ -172,13 +183,22 @@ Step 5: Compare the models
 - Discuss how they compare and whether any of them is best.
 
 ```{r}
-coeftab(model1,model2,model3)
-plot(coeftab(model1,model2,model3))
-compare(model1,model2,model3)
-plot(compare(model1,model2,model3))
+coeftab(model2,model3)
+plot(coeftab(model2,model3))
+compare(model2,model3)
+plot(compare(model2,model3))
+
+simSchizo <- sim( model1 , data=PitchData2[PitchData2$diagnosis==1,])
+simControl <- sim( model1 , data=PitchData2[PitchData2$diagnosis==0,])
 
 
 
+dens(PitchData2$scaleSD[PitchData2$diagnosis=="1"], col="red")
+dens(simSchizo, add=TRUE)
+
+
+dens(PitchData2$scaleSD[PitchData2$diagnosis=="0"], col="red")
+dens(simControl, add=TRUE)
 
 ```
 
