@@ -165,9 +165,9 @@ alist(
     scaleSD ~ dnorm( mu , sigma ),
     mu <- Intercept +
         b_diagnosis*diagnosis,
-    Intercept ~ dnorm(0,2),
+    Intercept ~ dnorm(0,1),
     b_diagnosis ~ dnorm(-0.57,0.23),
-    sigma ~ dcauchy(0,5)
+    sigma ~ dcauchy(0,2)
 )
 , data = PitchData2)
 
